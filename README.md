@@ -139,3 +139,37 @@ reports/post_route_power.rpt
 The design is constrained for a 100 MHz target clock using:
 
 constraints/cordic_artix7.xdc
+
+## Vivado Timing and Utilization Results
+
+The design was synthesized and implemented for:
+
+```text
+Xilinx Artix-7 xc7a35tcpg236-1
+
+Post-Route Timing
+
+| Metric            |     Value |
+| ----------------- | --------: |
+| Clock target      |   100 MHz |
+| Clock period      | 10.000 ns |
+| WNS               | +3.947 ns |
+| TNS               |  0.000 ns |
+| Failing endpoints |         0 |
+| Timing status     |      PASS |
+
+Post-Route Utilization
+
+| Resource        | Used | Available | Utilization |
+| --------------- | ---: | --------: | ----------: |
+| Slice LUTs      | 1058 |     20800 |       5.09% |
+| Slice Registers |  749 |     41600 |       1.80% |
+| Block RAM Tiles |    0 |        50 |       0.00% |
+| DSPs            |    0 |        90 |       0.00% |
+| Bonded IOBs     |   54 |       106 |      50.94% |
+| BUFGCTRL        |    1 |        32 |       3.13% |
+
+Interpretation
+
+The CORDIC accelerator meets the 100 MHz post-route timing target with positive slack. The design uses a multiplier-free shift-add datapath, resulting in zero DSP and zero BRAM usage.
+

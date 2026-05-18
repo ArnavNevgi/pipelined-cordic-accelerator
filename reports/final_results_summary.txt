@@ -1,0 +1,39 @@
+Pipelined CORDIC Hardware Accelerator Benchmark
+Final Results Summary
+
+Design:
+- 16-stage pipelined CORDIC sine/cosine accelerator
+- Rotation-mode CORDIC
+- Q2.14 fixed-point arithmetic
+- Valid-ready streaming interface
+- Global-stall backpressure support
+- Target FPGA: Xilinx Artix-7 xc7a35tcpg236-1
+
+Simulation and Accuracy:
+- Test vectors: 1011
+- Accuracy status: PASS
+- Max sine error: 8 LSBs
+- Max cosine error: 8 LSBs
+- Continuous output-span throughput: 1.000000 outputs/cycle
+- Randomized backpressure output-span throughput: 0.713479 outputs/cycle
+
+Vivado Post-Route Timing:
+- Clock target: 100 MHz
+- Clock period: 10.000 ns
+- WNS: +3.947 ns
+- TNS: 0.000 ns
+- Failing endpoints: 0
+- Timing status: PASS
+
+Vivado Post-Route Utilization:
+- Slice LUTs: 1058 / 20800 = 5.09%
+- Slice Registers: 749 / 41600 = 1.80%
+- Block RAM Tiles: 0 / 50 = 0.00%
+- DSPs: 0 / 90 = 0.00%
+- Bonded IOBs: 54 / 106 = 50.94%
+- BUFGCTRL: 1 / 32 = 3.13%
+
+Notes:
+- No physical FPGA board was used.
+- No package pin constraints were applied.
+- Current timing result demonstrates post-route timing closure for the internal registered datapath at 100 MHz.

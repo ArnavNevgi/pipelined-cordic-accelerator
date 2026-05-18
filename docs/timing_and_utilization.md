@@ -2,43 +2,48 @@
 
 ## Target FPGA
 
-- Family: Xilinx Artix-7
-- Part: xc7a35tcpg236-1
-- Clock target: 100 MHz
-- Clock period: 10 ns
-- Physical board: not used
+| Item | Value |
+|---|---:|
+| FPGA family | Xilinx Artix-7 |
+| Part | xc7a35tcpg236-1 |
+| Speed grade | -1 |
+| Top module | cordic_top |
+| Clock target | 100 MHz |
+| Clock period | 10 ns |
+| Physical board | Not used |
 
 ## Vivado Flow
 
-The project uses Vivado batch scripts in non-project mode.
+The design was synthesized and implemented using Vivado batch scripts.
 
 ### Synthesis
 
-```text
 vivado -mode batch -source scripts/vivado_synth.tcl
 
 Implementation
+
 vivado -mode batch -source scripts/vivado_impl.tcl
-Generated Reports
 
-Synthesis reports:
+Post-Route Timing Results
 
-reports/synth_timing_summary.rpt
-reports/synth_utilization.rpt
-reports/synth_power.rpt
-reports/synth_clock_utilization.rpt
-reports/synth_check_timing.rpt
+| Metric               |       Value |
+| -------------------- | ----------: |
+| Timing status        |        PASS |
+| Worst Negative Slack |   +3.947 ns |
+| Total Negative Slack |    0.000 ns |
+| Failing endpoints    |           0 |
+| Clock period         |   10.000 ns |
+| Clock frequency      | 100.000 MHz |
 
-Post-route implementation reports:
+The design meets the 100 MHz post-route timing target.
 
-reports/post_route_timing_summary.rpt
-reports/post_route_utilization.rpt
-reports/post_route_power.rpt
-reports/route_status.rpt
-reports/post_route_clock_utilization.rpt
-reports/post_route_check_timing.rpt
-Status
+Post-Route Utilization Results
 
-Vivado synthesis and implementation reports are generated in Phase 8.
-
-The numerical timing and utilization summary is extracted in Phase 9.
+| Resource        | Used | Available | Utilization |
+| --------------- | ---: | --------: | ----------: |
+| Slice LUTs      | 1058 |     20800 |       5.09% |
+| Slice Registers |  749 |     41600 |       1.80% |
+| Block RAM Tiles |    0 |        50 |       0.00% |
+| DSPs            |    0 |        90 |       0.00% |
+| Bonded IOBs     |   54 |       106 |      50.94% |
+| BUFGCTRL        |    1 |        32 |       3.13% |
