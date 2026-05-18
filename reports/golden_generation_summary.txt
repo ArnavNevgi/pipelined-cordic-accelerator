@@ -1,0 +1,16 @@
+Golden vector generation summary
+
+Data width: 16 bits
+Fixed-point format: Q2.14
+Fractional bits: 14
+Scale factor: 16384
+Signed range: -32768 to 32767
+Angle range: -1.570796326795 to 1.570796326795 radians
+Directed tests: 11
+Random tests: 1000
+Total vectors: 1011
+Random seed: 42
+
+CORDIC gain compensation K: 0.607252935103
+CORDIC K in Q2.14 signed integer: 9949
+CORDIC K in Q2.14 hex: 16'h26DD
