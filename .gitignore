@@ -1,0 +1,47 @@
+@"
+# ============================================================
+# Git ignore for FPGA RTL project
+# ============================================================
+
+# Vivado generated files
+vivado_project/
+*.jou
+*.log
+*.str
+*.wdb
+*.rpt
+*.dcp
+*.bit
+*.ltx
+*.runs/
+*.cache/
+*.hw/
+*.ip_user_files/
+*.sim/
+*.srcs/
+*.xpr
+.Xil/
+
+# QuestaSim / ModelSim
+work/
+transcript
+*.wlf
+*.vstf
+*.ucdb
+*.vcd
+*.fst
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+"@ | Set-Content .gitignore
