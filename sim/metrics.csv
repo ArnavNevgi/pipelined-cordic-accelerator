@@ -1,0 +1,2 @@
+random_stalls,seed,num_vectors,clk_period_ns,first_input_cycle,first_output_cycle,last_input_cycle,last_output_cycle,first_latency_cycles,active_cycles,output_span_cycles,throughput_active_outputs_per_cycle,throughput_output_span_outputs_per_cycle
+1,123,1011,10,2,19,1415,1435,17,1434,1417,0.705021,0.713479

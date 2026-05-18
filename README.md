@@ -173,3 +173,17 @@ Interpretation
 
 The CORDIC accelerator meets the 100 MHz post-route timing target with positive slack. The design uses a multiplier-free shift-add datapath, resulting in zero DSP and zero BRAM usage.
 
+## Assertion Checks
+
+The testbench includes simulation-time SystemVerilog assertions in:
+
+```text
+tb/cordic_assertions.sv
+
+The assertions check reset behavior, valid-ready stability rules, X-propagation, output stability during backpressure and transaction-count ordering.
+
+The assertions are compiled and run as part of:
+
+do scripts/run_questa.do
+do scripts/run_benchmark.do
+

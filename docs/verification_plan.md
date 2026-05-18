@@ -105,3 +105,31 @@ Generated benchmark files:
 - `reports/benchmark_summary.txt`
 
 The continuous streaming output-span throughput should be close to one output per cycle. Randomized backpressure throughput should be lower, with all outputs preserved in order.
+
+## Phase 10 Assertion-Based Checks
+
+Simulation-time SystemVerilog assertions were added in:
+
+```text
+tb/cordic_assertions.sv
+Assertion Coverage
+
+The assertion module checks:
+
+Reset clears out_valid
+No unknown input value is accepted
+No unknown sine or cosine output is presented when out_valid is high
+Input data remains stable when in_valid is high and in_ready is low
+Output data remains stable when out_valid is high and out_ready is low
+Accepted output count never exceeds accepted input count
+out_valid is not asserted without a prior unconsumed input transaction
+Purpose
+
+These assertions strengthen the valid-ready verification flow and help catch protocol violations, data corruption under backpressure, and X-propagation issues during simulation.
+
+Pass Criteria
+
+The simulation must complete without any assertion failures in both:
+
+do scripts/run_questa.do
+do scripts/run_benchmark.do

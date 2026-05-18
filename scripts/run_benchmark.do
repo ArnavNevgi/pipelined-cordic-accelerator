@@ -1,11 +1,5 @@
 transcript on
 
-if {![file exists rtl/cordic_pkg.sv]} {
-    error "Run this script from the repository root: do scripts/run_benchmark.do"
-}
-
-file mkdir sim
-
 if {[file exists work]} {
     vdel -lib work -all
 }
@@ -18,7 +12,8 @@ vlog -sv rtl/cordic_pkg.sv
 vlog -sv rtl/cordic_core.sv
 vlog -sv rtl/cordic_top.sv
 
-# Compile testbench
+# Compile testbench and assertions
+vlog -sv tb/cordic_assertions.sv
 vlog -sv tb/cordic_tb.sv
 
 # ------------------------------------------------------------
@@ -29,8 +24,8 @@ puts "============================================================"
 puts "Running continuous streaming benchmark"
 puts "============================================================"
 
-vsim -c -onfinish stop work.cordic_tb +RANDOM_STALLS=0 +SEED=123 +RTL_CSV=sim/rtl_output_continuous.csv +METRICS_CSV=sim/metrics_continuous.csv
-run -all
+vsim -c work.cordic_tb +RANDOM_STALLS=0 +SEED=123 +RTL_CSV=sim/rtl_output_continuous.csv +METRICS_CSV=sim/metrics_continuous.csv -onfinish stop -do "run -all"
+
 quit -sim
 
 # ------------------------------------------------------------
@@ -41,7 +36,8 @@ puts "============================================================"
 puts "Running randomized backpressure benchmark"
 puts "============================================================"
 
-vsim -c -onfinish stop work.cordic_tb +RANDOM_STALLS=1 +SEED=123 +RTL_CSV=sim/rtl_output_backpressure.csv +METRICS_CSV=sim/metrics_backpressure.csv
-run -all
+vsim -c work.cordic_tb +RANDOM_STALLS=1 +SEED=123 +RTL_CSV=sim/rtl_output_backpressure.csv +METRICS_CSV=sim/metrics_backpressure.csv -onfinish stop -do "run -all"
+
+quit -sim
 
 quit

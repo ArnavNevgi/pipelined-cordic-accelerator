@@ -110,6 +110,24 @@ module cordic_tb;
       .sin_out   (sin_out)
   );
 
+    // ------------------------------------------------------------
+  // Assertion checker
+  // ------------------------------------------------------------
+
+  cordic_assertions u_cordic_assertions (
+      .clk       (clk),
+      .rst_n     (rst_n),
+
+      .in_valid  (in_valid),
+      .in_ready  (in_ready),
+      .angle_in  (angle_in),
+
+      .out_valid (out_valid),
+      .out_ready (out_ready),
+      .sin_out   (sin_out),
+      .cos_out   (cos_out)
+  );
+
   // ------------------------------------------------------------
   // Clock generation
   // ------------------------------------------------------------
