@@ -1,5 +1,9 @@
 transcript on
 
+if {![file exists rtl/cordic_pkg.sv]} {
+    error "Run this script from the repository root: do scripts/compile_core_test.do"
+}
+
 if {[file exists work]} {
     vdel -lib work -all
 }

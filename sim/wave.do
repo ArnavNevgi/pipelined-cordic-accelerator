@@ -15,6 +15,9 @@ add wave -radix binary   sim:/cordic_tb/out_ready
 add wave -radix decimal  sim:/cordic_tb/sin_out
 add wave -radix decimal  sim:/cordic_tb/cos_out
 
+add wave -divider "Pipeline Control"
+add wave -radix binary sim:/cordic_tb/dut/u_cordic_core/pipe_advance
+
 add wave -divider "Counters"
 add wave -radix decimal sim:/cordic_tb/sent_count
 add wave -radix decimal sim:/cordic_tb/recv_count
