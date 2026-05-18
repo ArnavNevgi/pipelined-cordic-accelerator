@@ -45,3 +45,5 @@ Thumbs.db
 *.tmp
 *.bak
 "@ | Set-Content .gitignore
+# ModelSim/Questa local config
+modelsim.ini
