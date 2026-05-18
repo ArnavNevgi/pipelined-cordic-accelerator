@@ -5,6 +5,8 @@
 # Vivado generated files
 vivado_project/
 .Xil/
+clockInfo.txt
+dfx_runtime.txt
 *.jou
 *.log
 *.str
@@ -51,8 +53,17 @@ Thumbs.db
 !reports/benchmark_summary.txt
 !reports/atan_table_q214.txt
 !reports/golden_generation_summary.txt
+!reports/final_results_summary.txt
+!reports/timing_utilization_summary.md
+!reports/post_route_timing_summary.rpt
+!reports/post_route_utilization.rpt
+!reports/post_route_power.rpt
+!reports/route_status.rpt
+!reports/post_route_clock_utilization.rpt
+!reports/post_route_check_timing.rpt
 !sim/golden_output.csv
 !sim/rtl_output.csv
+!sim/metrics.csv
 !sim/metrics_continuous.csv
 !sim/metrics_backpressure.csv
 !sim/rtl_output_continuous.csv

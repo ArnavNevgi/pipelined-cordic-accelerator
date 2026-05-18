@@ -2,7 +2,7 @@
 
 ## Overview
 
-This report summarizes simulation-measured latency and throughput for the 16-stage pipelined CORDIC sine/cosine accelerator.
+This report summarizes simulation-measured latency and throughput for the 16-stage pipelined CORDIC sine/cosine accelerator. The benchmark uses the same 1011-vector dataset as the accuracy comparison.
 
 ## Benchmark Configuration
 
@@ -23,9 +23,11 @@ This report summarizes simulation-measured latency and throughput for the 16-sta
 
 ## Interpretation
 
-In continuous streaming mode, the CORDIC pipeline should approach one sine/cosine output pair per cycle after the initial pipeline fill. The active-window throughput includes the initial pipeline latency, while output-span throughput measures only the output production interval.
+In continuous streaming mode, the pipeline produces one sine/cosine output pair per cycle after the initial fill. The output-span throughput captures this steady output production interval.
 
-In randomized backpressure mode, throughput decreases because the valid-ready interface stalls the entire pipeline when the downstream consumer deasserts `out_ready`. The pass condition is that all outputs are preserved in order and the RTL output still matches the Python golden model.
+In randomized backpressure mode, throughput is lower because the valid-ready interface stalls the full pipeline whenever the downstream sink deasserts `out_ready`. This behavior is intentional: the global stall preserves output data and every in-flight transaction.
+
+The active-window throughput includes the initial latency from first accepted input to final accepted output, while output-span throughput measures only the interval from first accepted output to final accepted output.
 
 ## Generated Files
 
@@ -33,3 +35,4 @@ In randomized backpressure mode, throughput decreases because the valid-ready in
 - `sim/metrics_backpressure.csv`
 - `sim/rtl_output_continuous.csv`
 - `sim/rtl_output_backpressure.csv`
+- `reports/benchmark_summary.txt`

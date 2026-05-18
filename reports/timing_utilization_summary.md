@@ -10,19 +10,20 @@
 | Design state | Routed |
 | Clock target | 100 MHz |
 | Clock period | 10.000 ns |
+| Physical board | Not used |
 
 ## Post-Route Timing Summary
 
 | Metric | Value |
 |---|---:|
 | Timing status | PASS |
-| Worst Negative Slack | +3.947 ns |
-| Total Negative Slack | 0.000 ns |
+| WNS | +3.947 ns |
+| TNS | 0.000 ns |
 | Failing endpoints | 0 |
 | Clock period | 10.000 ns |
 | Clock frequency | 100.000 MHz |
 
-Vivado reports that all user-specified timing constraints are met.
+Vivado reports positive setup slack and zero failing endpoints for the constrained clock domain.
 
 ## Post-Route Utilization Summary
 
@@ -37,19 +38,19 @@ Vivado reports that all user-specified timing constraints are met.
 
 ## Interpretation
 
-The 16-stage CORDIC accelerator meets the 100 MHz post-route timing target on the Xilinx Artix-7 xc7a35tcpg236-1 device.
+The 16-stage CORDIC accelerator meets the 100 MHz post-route timing target on the Xilinx Artix-7 `xc7a35tcpg236-1` device.
 
-The design uses a multiplier-free shift-add datapath, which is reflected in the post-route utilization results:
+The datapath uses shifts, additions, and subtractions rather than multipliers or lookup RAMs. The post-route utilization reflects that implementation choice:
 
 - 0 DSP blocks
 - 0 BRAM tiles
 - 1058 LUTs
-- 749 flip-flops
+- 749 registers
 
-The relatively higher I/O utilization is caused by the simple top-level parallel interface, not by the internal datapath itself.
+The I/O utilization is driven by the simple parallel top-level interface and the selected package size.
 
 ## Constraint Note
 
-The current timing report shows that the main clock is constrained and internal timing is met. The report also flags missing input and output delay constraints for top-level I/O ports. Since this project is completed without a physical board, no package pin or board-level timing constraints are applied.
+The project does not include physical package pin constraints because no board target is used. The timing result demonstrates closure for the routed internal registered datapath at 100 MHz.
 
-For a board-specific implementation, the next step would be to add board-level pin constraints and real external I/O timing constraints.
+The Vivado timing checks also report missing input and output delay constraints on top-level I/O ports. For a board-specific implementation, the next step would be to add package pins and external I/O timing constraints based on the actual surrounding system.

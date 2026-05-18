@@ -1,21 +1,31 @@
-# Verification Plan
+# Verification Methodology
 
 ## Verification Goals
 
-The design is verified against a Python golden reference model and simulation-generated RTL CSV output.
+The verification flow checks that the CORDIC RTL:
 
-## Test Categories
+- Accepts and preserves signed Q2.14 input angles.
+- Produces sine and cosine outputs in the expected order.
+- Matches the Python golden reference within the selected fixed-point tolerance.
+- Preserves all transactions during valid-ready backpressure.
+- Holds input and output data stable during stalled handshakes.
+- Completes continuous and randomized simulations without assertion failures.
+- Produces reproducible accuracy, latency, and throughput evidence.
 
-1. Directed angle tests
-2. Randomized angle tests
-3. Continuous streaming tests
-4. Valid-ready backpressure tests
-5. Reset behavior checks
-6. Latency and throughput measurement
+## Test Vector Generation
 
-## Directed Angles
+`scripts/gen_golden.py` generates the input vectors and golden reference data. It writes:
 
-The directed test set includes angles such as:
+- `tb/cordic_test_vectors.hex`
+- `sim/golden_output.csv`
+- `reports/atan_table_q214.txt`
+- `reports/golden_generation_summary.txt`
+
+The generator uses signed Q2.14 conversion with 14 fractional bits and a scale factor of 16384. It also records the CORDIC gain compensation constant and arctangent lookup table.
+
+## Directed Tests
+
+The directed set covers representative points in the supported angle range:
 
 - `0`
 - `+/-pi/12`
@@ -24,35 +34,58 @@ The directed test set includes angles such as:
 - `+/-pi/3`
 - `+/-pi/2`
 
-## Random Testing
+These values exercise zero angle behavior, positive and negative rotations, and range endpoints.
 
-Random angles are generated in the current supported range:
+## Randomized Tests
+
+The random test set contains angles generated uniformly in:
 
 ```text
 -pi/2 to +pi/2 radians
 ```
 
-The generator uses a fixed seed so the test set is reproducible.
+The random seed is fixed so the vector set is reproducible. The current generated set contains 1011 total samples, including directed and random vectors.
 
-## Simulation Flow
+## Backpressure Tests
 
-1. Generate golden vectors:
+The QuestaSim testbench supports two operating modes:
 
-```text
-python scripts/gen_golden.py
-```
+- Continuous streaming with `in_valid` high and `out_ready` high.
+- Randomized input valid gaps and randomized output backpressure.
 
-2. Run the default RTL simulation from the repository root in QuestaSim:
-
-```text
-do scripts/run_questa.do
-```
-
-3. Compare RTL output against golden output:
+The testbench accepts plusargs:
 
 ```text
-python scripts/compare_results.py
++RANDOM_STALLS=0 or 1
++SEED=<integer>
++RTL_CSV=<path>
++METRICS_CSV=<path>
 ```
+
+When randomized stalls are enabled, the input source holds `angle_in` stable while `in_valid` is high and `in_ready` is low. The output monitor records only accepted output handshakes, preserving ordering through the CSV index.
+
+## Assertion Checks
+
+Simulation-time SystemVerilog assertions are implemented in `tb/cordic_assertions.sv`. They check:
+
+- Reset clears visible output valid.
+- Accepted input angles are not unknown.
+- Valid output sine and cosine values are not unknown.
+- Input data remains stable when `in_valid` is high and `in_ready` is low.
+- Output data remains stable when `out_valid` is high and `out_ready` is low.
+- Accepted output count never exceeds accepted input count.
+- `out_valid` is not asserted without a prior unconsumed input transaction.
+
+The assertion module is compiled by the QuestaSim scripts used for the default simulation and benchmark simulations.
+
+## Golden Model Comparison
+
+`scripts/compare_results.py` reads:
+
+- `sim/golden_output.csv`
+- `sim/rtl_output.csv`
+
+The script verifies row count, output index, input angle ordering, signed Q2.14 sine output, and signed Q2.14 cosine output. It computes maximum absolute error, mean absolute error, RMS error, and LSB error.
 
 ## Pass Criteria
 
@@ -64,72 +97,23 @@ recv_count = NUM_VECTORS
 measured_first_latency >= STAGES
 max sine error <= selected tolerance
 max cosine error <= selected tolerance
+no SystemVerilog assertion failures
 ```
 
-The comparison tolerance is defined in `scripts/compare_results.py`.
+The current accuracy tolerance is defined in `scripts/compare_results.py`.
 
-## Backpressure Verification
+## Generated Evidence
 
-The testbench supports randomized valid-ready behavior through plusargs:
+The verification and benchmark flow produces:
 
-```text
-+RANDOM_STALLS=0 or 1
-+SEED=<integer>
-+RTL_CSV=<path>
-+METRICS_CSV=<path>
-```
-
-In randomized mode, the input source inserts valid gaps and the output sink randomly deasserts `out_ready`. Once the source presents a valid input sample, it holds that sample stable until the input handshake completes.
-
-## Benchmark Flow
-
-Run the Phase 7 benchmark from the repository root in QuestaSim:
-
-```text
-do scripts/run_benchmark.do
-```
-
-Then generate the report:
-
-```text
-python scripts/generate_benchmark_report.py
-```
-
-Generated benchmark files:
-
-- `sim/metrics_continuous.csv`
-- `sim/metrics_backpressure.csv`
+- `sim/rtl_output.csv`
 - `sim/rtl_output_continuous.csv`
 - `sim/rtl_output_backpressure.csv`
+- `sim/metrics.csv`
+- `sim/metrics_continuous.csv`
+- `sim/metrics_backpressure.csv`
+- `reports/accuracy_report.txt`
 - `reports/benchmark_summary.md`
 - `reports/benchmark_summary.txt`
 
-The continuous streaming output-span throughput should be close to one output per cycle. Randomized backpressure throughput should be lower, with all outputs preserved in order.
-
-## Phase 10 Assertion-Based Checks
-
-Simulation-time SystemVerilog assertions were added in:
-
-```text
-tb/cordic_assertions.sv
-Assertion Coverage
-
-The assertion module checks:
-
-Reset clears out_valid
-No unknown input value is accepted
-No unknown sine or cosine output is presented when out_valid is high
-Input data remains stable when in_valid is high and in_ready is low
-Output data remains stable when out_valid is high and out_ready is low
-Accepted output count never exceeds accepted input count
-out_valid is not asserted without a prior unconsumed input transaction
-Purpose
-
-These assertions strengthen the valid-ready verification flow and help catch protocol violations, data corruption under backpressure, and X-propagation issues during simulation.
-
-Pass Criteria
-
-The simulation must complete without any assertion failures in both:
-
-do scripts/run_questa.do
-do scripts/run_benchmark.do
+The current generated reports show PASS accuracy across 1011 samples, a continuous output-span throughput of `1.000000 outputs/cycle`, and a randomized backpressure output-span throughput of `0.713479 outputs/cycle`.
