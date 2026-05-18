@@ -61,3 +61,33 @@ Expected Latency
 
 The expected latency is 16 clock cycles from input handshake to output valid.
 
+## Valid-Ready Backpressure Support
+
+The CORDIC core now supports output backpressure using a global pipeline stall mechanism.
+
+### Pipeline Advance Rule
+
+The pipeline advances when:
+
+out_ready = 1
+
+or when the output stage is empty:
+
+out_valid = 0
+
+The implemented condition is:
+
+pipe_advance = out_ready || !valid_pipe[STAGES];
+Input Ready Behavior
+
+The input interface is ready only when the pipeline can advance:
+
+in_ready = pipe_advance;
+Stall Behavior
+
+When the downstream interface deasserts out_ready while out_valid is high, all pipeline registers hold their values. This prevents output data loss and preserves all in-flight transactions.
+
+Design Tradeoff
+
+This implementation uses a global stall rather than per-stage elastic buffering. It is simpler, deterministic and appropriate for this fixed-latency CORDIC accelerator. Under continuous downstream readiness, the accelerator achieves one output per cycle after pipeline fill.
+

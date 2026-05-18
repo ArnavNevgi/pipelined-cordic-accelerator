@@ -54,3 +54,30 @@ The first SystemVerilog testbench performs a basic end-to-end simulation of the 
 
 The Phase 4 testbench does not yet compare RTL output against the Python golden model. Numerical comparison is added in the next phase.
 
+## Backpressure Verification
+
+The testbench was upgraded to verify valid-ready behavior under randomized input and output stalls.
+
+### Added Test Conditions
+
+- Random input valid gaps
+- Random output backpressure
+- Continuous output ordering check through CSV index alignment
+- Output count check
+- First-output latency measurement
+- Throughput measurement in outputs per cycle
+
+### Pass Criteria
+
+The simulation passes if:
+
+```text
+sent_count = NUM_VECTORS
+recv_count = NUM_VECTORS
+measured_first_latency >= STAGES
+
+The RTL output CSV is then compared against the Python golden model using:
+
+python scripts/compare_results.py
+
+A passing comparison confirms that valid-ready stalls did not corrupt data ordering or numerical output values.

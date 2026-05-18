@@ -1,0 +1,26 @@
+CORDIC RTL vs Golden Accuracy Report
+====================================
+
+Configuration
+-------------
+Data width: 16 bits
+Fixed-point format: Q2.14
+Fractional bits: 14
+Scale factor: 16384
+Total compared samples: 1011
+Maximum allowed error: 8 LSBs
+
+Error Metrics
+-------------
+Max absolute sine error   : 8 LSBs, 0.000488281250
+Max absolute cosine error : 8 LSBs, 0.000488281250
+Mean absolute sine error  : 0.000112290198
+Mean absolute cosine error: 0.000110116840
+RMS sine error            : 0.000143544998
+RMS cosine error          : 0.000139509468
+
+Pass/Fail
+---------
+Status: PASS
+Number of samples above tolerance: 0
+

@@ -5,13 +5,12 @@
 //
 // 16-stage pipelined CORDIC sine/cosine accelerator.
 //
-// Phase 3 version:
+// Phase 6 version:
 //   - Rotation-mode CORDIC
 //   - Q2.14 fixed-point arithmetic
 //   - 16 pipeline stages
-//   - Valid-ready style interface
-//   - Always-ready input
-//   - No output backpressure handling yet
+//   - Valid-ready streaming interface
+//   - Global stall support for output backpressure
 //
 // Supported angle range:
 //   -pi/2 to +pi/2 radians
@@ -51,14 +50,24 @@ module cordic_core (
   logic valid_pipe [0:STAGES];
 
   // ------------------------------------------------------------
-  // Phase 3 simplification:
+  // Pipeline control
+  // ------------------------------------------------------------
   //
-  // The core always accepts input every cycle.
-  // out_ready is intentionally unused in this first version.
-  // Full stall-aware valid-ready support will be added later.
+  // The pipeline advances when:
+  //
+  //   1. The output stage is empty, or
+  //   2. The output stage contains valid data and the downstream
+  //      interface is ready to accept it.
+  //
+  // If out_valid is high and out_ready is low, the full pipeline
+  // stalls and all registers hold their values.
   // ------------------------------------------------------------
 
-  assign in_ready = 1'b1;
+  logic pipe_advance;
+
+  assign pipe_advance = out_ready || !valid_pipe[STAGES];
+
+  assign in_ready = pipe_advance;
 
   // ------------------------------------------------------------
   // Output assignments
@@ -84,73 +93,57 @@ module cordic_core (
 
     end else begin
 
-      // --------------------------------------------------------
-      // Load pipeline input stage
-      //
-      // x starts at CORDIC gain compensation constant.
-      // y starts at zero.
-      // z starts at input angle.
-      // --------------------------------------------------------
+      if (pipe_advance) begin
 
-      if (in_valid && in_ready) begin
-        x_pipe[0]     <= CORDIC_K;
-        y_pipe[0]     <= '0;
-        z_pipe[0]     <= angle_in;
-        valid_pipe[0] <= 1'b1;
-      end else begin
-        x_pipe[0]     <= '0;
-        y_pipe[0]     <= '0;
-        z_pipe[0]     <= '0;
-        valid_pipe[0] <= 1'b0;
-      end
+        // ------------------------------------------------------
+        // Load pipeline input stage
+        // ------------------------------------------------------
 
-      // --------------------------------------------------------
-      // CORDIC iteration stages
-      //
-      // For each stage i:
-      //
-      // if z_i >= 0:
-      //   x_{i+1} = x_i - (y_i >>> i)
-      //   y_{i+1} = y_i + (x_i >>> i)
-      //   z_{i+1} = z_i - atan(2^-i)
-      //
-      // else:
-      //   x_{i+1} = x_i + (y_i >>> i)
-      //   y_{i+1} = y_i - (x_i >>> i)
-      //   z_{i+1} = z_i + atan(2^-i)
-      // --------------------------------------------------------
-
-      for (int i = 0; i < STAGES; i++) begin
-
-        valid_pipe[i+1] <= valid_pipe[i];
-
-        if (valid_pipe[i]) begin
-          if (z_pipe[i] >= 0) begin
-            x_pipe[i+1] <= x_pipe[i] - (y_pipe[i] >>> i);
-            y_pipe[i+1] <= y_pipe[i] + (x_pipe[i] >>> i);
-            z_pipe[i+1] <= z_pipe[i] - ATAN_TABLE[i];
-          end else begin
-            x_pipe[i+1] <= x_pipe[i] + (y_pipe[i] >>> i);
-            y_pipe[i+1] <= y_pipe[i] - (x_pipe[i] >>> i);
-            z_pipe[i+1] <= z_pipe[i] + ATAN_TABLE[i];
-          end
+        if (in_valid && in_ready) begin
+          x_pipe[0]     <= CORDIC_K;
+          y_pipe[0]     <= '0;
+          z_pipe[0]     <= angle_in;
+          valid_pipe[0] <= 1'b1;
         end else begin
-          x_pipe[i+1] <= '0;
-          y_pipe[i+1] <= '0;
-          z_pipe[i+1] <= '0;
+          x_pipe[0]     <= '0;
+          y_pipe[0]     <= '0;
+          z_pipe[0]     <= '0;
+          valid_pipe[0] <= 1'b0;
+        end
+
+        // ------------------------------------------------------
+        // CORDIC iteration stages
+        // ------------------------------------------------------
+
+        for (int i = 0; i < STAGES; i++) begin
+
+          valid_pipe[i+1] <= valid_pipe[i];
+
+          if (valid_pipe[i]) begin
+            if (z_pipe[i] >= 0) begin
+              x_pipe[i+1] <= x_pipe[i] - (y_pipe[i] >>> i);
+              y_pipe[i+1] <= y_pipe[i] + (x_pipe[i] >>> i);
+              z_pipe[i+1] <= z_pipe[i] - ATAN_TABLE[i];
+            end else begin
+              x_pipe[i+1] <= x_pipe[i] + (y_pipe[i] >>> i);
+              y_pipe[i+1] <= y_pipe[i] - (x_pipe[i] >>> i);
+              z_pipe[i+1] <= z_pipe[i] + ATAN_TABLE[i];
+            end
+          end else begin
+            x_pipe[i+1] <= '0;
+            y_pipe[i+1] <= '0;
+            z_pipe[i+1] <= '0;
+          end
+
         end
 
       end
+
+      // If pipe_advance is low, all pipeline registers hold.
+      // This preserves output data and all in-flight transactions
+      // during downstream backpressure.
+
     end
   end
-
-  // ------------------------------------------------------------
-  // Unused signal note
-  // ------------------------------------------------------------
-  //
-  // out_ready is part of the final interface but is not used in
-  // Phase 3. Later phases will add full stall-aware pipeline
-  // control.
-  // ------------------------------------------------------------
 
 endmodule

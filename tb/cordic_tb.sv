@@ -3,19 +3,20 @@
 // ============================================================
 // cordic_tb.sv
 //
-// Phase 4 basic testbench for the 16-stage pipelined CORDIC
+// Phase 6 testbench for the 16-stage pipelined CORDIC
 // accelerator.
 //
 // This testbench:
 //   - Reads Q2.14 angle vectors from tb/cordic_test_vectors.hex
-//   - Drives the DUT with continuous valid input
-//   - Keeps out_ready high
+//   - Applies randomized input valid gaps
+//   - Applies randomized output backpressure
 //   - Captures sine/cosine outputs
 //   - Writes RTL output CSV to sim/rtl_output.csv
-//   - Measures first-output latency
+//   - Measures latency and throughput
+//   - Checks output count
 //
-// This testbench does not yet compare against the golden model.
-// Python comparison will be added in the next phase.
+// Python comparison is performed separately using:
+//   python scripts/compare_results.py
 // ============================================================
 
 import cordic_pkg::*;
@@ -28,7 +29,13 @@ module cordic_tb;
 
   localparam int CLK_PERIOD_NS = 10;
   localparam int NUM_VECTORS   = 1011;
-  localparam int MAX_CYCLES    = 5000;
+  localparam int MAX_CYCLES    = 20000;
+
+  localparam int RANDOM_SEED   = 123;
+
+  // Set to 1 for randomized valid and ready behavior.
+  // Set to 0 for continuous streaming.
+  localparam bit ENABLE_RANDOM_STALLS = 1'b1;
 
   // ------------------------------------------------------------
   // DUT signals
@@ -58,7 +65,12 @@ module cordic_tb;
 
   int first_input_cycle;
   int first_output_cycle;
-  int measured_latency;
+  int last_input_cycle;
+  int last_output_cycle;
+
+  int measured_first_latency;
+  int active_cycles;
+  real measured_throughput;
 
   int rtl_csv_fd;
 
@@ -102,6 +114,23 @@ module cordic_tb;
   end
 
   // ------------------------------------------------------------
+  // Output ready generation
+  // ------------------------------------------------------------
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      out_ready <= 1'b1;
+    end else begin
+      if (ENABLE_RANDOM_STALLS) begin
+        // Around 80 percent ready, 20 percent stalled.
+        out_ready <= ($urandom_range(0, 9) >= 2);
+      end else begin
+        out_ready <= 1'b1;
+      end
+    end
+  end
+
+  // ------------------------------------------------------------
   // Output monitor
   // ------------------------------------------------------------
 
@@ -109,12 +138,15 @@ module cordic_tb;
     if (!rst_n) begin
       recv_count         <= 0;
       first_output_cycle <= -1;
+      last_output_cycle  <= -1;
     end else begin
       if (out_valid && out_ready) begin
 
         if (recv_count == 0) begin
           first_output_cycle <= cycle_count;
         end
+
+        last_output_cycle <= cycle_count;
 
         $fdisplay(
           rtl_csv_fd,
@@ -138,19 +170,24 @@ module cordic_tb;
   initial begin
 
     // Initial values
-    rst_n              = 1'b0;
-    in_valid          = 1'b0;
-    angle_in          = '0;
-    out_ready         = 1'b1;
+    rst_n                 = 1'b0;
+    in_valid             = 1'b0;
+    angle_in             = '0;
 
-    sent_count         = 0;
-    first_input_cycle  = -1;
-    measured_latency   = -1;
+    sent_count            = 0;
+    first_input_cycle     = -1;
+    last_input_cycle      = -1;
+    measured_first_latency = -1;
+    active_cycles         = 0;
+    measured_throughput   = 0.0;
+
+    void'($urandom(RANDOM_SEED));
 
     // Load test vectors
     $display("------------------------------------------------------------");
-    $display("CORDIC Phase 4 Testbench Started");
+    $display("CORDIC Phase 6 Backpressure Testbench Started");
     $display("Loading test vectors from tb/cordic_test_vectors.hex");
+    $display("Random stalls enabled: %0d", ENABLE_RANDOM_STALLS);
     $display("------------------------------------------------------------");
 
     $readmemh("tb/cordic_test_vectors.hex", angle_mem);
@@ -176,27 +213,31 @@ module cordic_tb;
     // --------------------------------------------------------
     // Drive all input vectors.
     //
-    // Use negedge driving so that values are stable before the
-    // next positive clock edge where the DUT samples them.
+    // This driver only advances to the next vector when the DUT
+    // accepts the current vector using in_valid && in_ready.
     // --------------------------------------------------------
 
-    for (int i = 0; i < NUM_VECTORS; i++) begin
+    while (sent_count < NUM_VECTORS) begin
       @(negedge clk);
 
-      in_valid = 1'b1;
-      angle_in = angle_mem[i];
-
-      if (i == 0) begin
-        first_input_cycle = cycle_count;
+      if (ENABLE_RANDOM_STALLS) begin
+        // Around 85 percent valid, 15 percent idle.
+        in_valid = ($urandom_range(0, 99) >= 15);
+      end else begin
+        in_valid = 1'b1;
       end
+
+      angle_in = angle_mem[sent_count];
 
       @(posedge clk);
 
       if (in_valid && in_ready) begin
+        if (sent_count == 0) begin
+          first_input_cycle = cycle_count;
+        end
+
+        last_input_cycle = cycle_count;
         sent_count++;
-      end else begin
-        $display("ERROR: Input was not accepted at vector %0d", i);
-        $finish;
       end
     end
 
@@ -215,17 +256,27 @@ module cordic_tb;
     // Close CSV
     $fclose(rtl_csv_fd);
 
+    // Final metrics
+    measured_first_latency = first_output_cycle - first_input_cycle;
+    active_cycles = last_output_cycle - first_input_cycle + 1;
+
+    if (active_cycles > 0) begin
+      measured_throughput = real'(recv_count) / real'(active_cycles);
+    end
+
     // Final checks
     $display("------------------------------------------------------------");
-    $display("CORDIC Phase 4 Testbench Summary");
+    $display("CORDIC Phase 6 Testbench Summary");
     $display("------------------------------------------------------------");
-    $display("Sent inputs      : %0d", sent_count);
-    $display("Received outputs : %0d", recv_count);
-    $display("First input cycle: %0d", first_input_cycle);
-    $display("First output cycle: %0d", first_output_cycle);
-
-    measured_latency = first_output_cycle - first_input_cycle;
-    $display("Measured first-output latency: %0d cycles", measured_latency);
+    $display("Sent inputs            : %0d", sent_count);
+    $display("Received outputs       : %0d", recv_count);
+    $display("First input cycle      : %0d", first_input_cycle);
+    $display("First output cycle     : %0d", first_output_cycle);
+    $display("Last input cycle       : %0d", last_input_cycle);
+    $display("Last output cycle      : %0d", last_output_cycle);
+    $display("Measured first latency : %0d cycles", measured_first_latency);
+    $display("Active cycles          : %0d", active_cycles);
+    $display("Measured throughput    : %f outputs/cycle", measured_throughput);
 
     if (sent_count != NUM_VECTORS) begin
       $display("FAIL: Sent count mismatch.");
@@ -237,14 +288,12 @@ module cordic_tb;
       $finish;
     end
 
-    if (measured_latency != STAGES) begin
-      $display("WARNING: Expected latency approximately %0d cycles, measured %0d cycles.", STAGES, measured_latency);
-      $display("This may be due to testbench cycle-count alignment. Check waveform if needed.");
-    end else begin
-      $display("Latency check passed.");
+    if (measured_first_latency < STAGES) begin
+      $display("FAIL: Latency shorter than expected pipeline depth.");
+      $finish;
     end
 
-    $display("PASS: Phase 4 basic CORDIC simulation completed.");
+    $display("PASS: Phase 6 valid-ready backpressure simulation completed.");
     $display("RTL output written to sim/rtl_output.csv");
     $display("------------------------------------------------------------");
 
