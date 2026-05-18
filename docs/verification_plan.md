@@ -36,3 +36,21 @@ Random angles will be generated in the range:
 ## Pass Criteria
 
 RTL sine and cosine outputs must match the Python fixed-point CORDIC model within the selected fixed-point tolerance.
+## Phase 4 Basic Simulation
+
+The first SystemVerilog testbench performs a basic end-to-end simulation of the 16-stage CORDIC pipeline.
+
+### Testbench Behavior
+
+- Reads Q2.14 angle vectors from `tb/cordic_test_vectors.hex`
+- Drives one angle per clock cycle
+- Keeps `out_ready` high
+- Captures `sin_out` and `cos_out`
+- Writes RTL results to `sim/rtl_output.csv`
+- Checks that the number of received outputs matches the number of sent inputs
+- Measures first-output latency
+
+### Current Limitation
+
+The Phase 4 testbench does not yet compare RTL output against the Python golden model. Numerical comparison is added in the next phase.
+
