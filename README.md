@@ -111,3 +111,31 @@ Generated benchmark files:
 - `sim/rtl_output_backpressure.csv`
 - `reports/benchmark_summary.md`
 - `reports/benchmark_summary.txt`
+
+## Vivado Synthesis and Implementation
+
+The design targets a Xilinx Artix-7 FPGA:
+
+```text
+xc7a35tcpg236-1
+
+Run synthesis:
+
+vivado -mode batch -source scripts/vivado_synth.tcl
+
+Run implementation:
+
+vivado -mode batch -source scripts/vivado_impl.tcl
+
+Generated reports include:
+
+reports/synth_timing_summary.rpt
+reports/synth_utilization.rpt
+reports/post_route_timing_summary.rpt
+reports/post_route_utilization.rpt
+reports/route_status.rpt
+reports/post_route_power.rpt
+
+The design is constrained for a 100 MHz target clock using:
+
+constraints/cordic_artix7.xdc
