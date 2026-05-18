@@ -1,0 +1,18 @@
+CORDIC Latency and Throughput Benchmark
+=======================================
+
+Continuous Streaming
+--------------------
+First latency cycles: 17
+Active cycles: 1028
+Output span cycles: 1011
+Throughput active window: 0.983463 outputs/cycle, 98.346 M outputs/s
+Throughput output span: 1.000000 outputs/cycle, 100.000 M outputs/s
+
+Randomized Backpressure
+-----------------------
+First latency cycles: 17
+Active cycles: 1434
+Output span cycles: 1417
+Throughput active window: 0.705021 outputs/cycle, 70.502 M outputs/s
+Throughput output span: 0.713479 outputs/cycle, 71.348 M outputs/s

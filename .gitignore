@@ -1,10 +1,10 @@
-@"
 # ============================================================
 # Git ignore for FPGA RTL project
 # ============================================================
 
 # Vivado generated files
 vivado_project/
+.Xil/
 *.jou
 *.log
 *.str
@@ -20,11 +20,11 @@ vivado_project/
 *.sim/
 *.srcs/
 *.xpr
-.Xil/
 
 # QuestaSim / ModelSim
 work/
 transcript
+modelsim.ini
 *.wlf
 *.vstf
 *.ucdb
@@ -44,6 +44,16 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.bak
-"@ | Set-Content .gitignore
-# ModelSim/Questa local config
-modelsim.ini
+
+# Project evidence intentionally tracked
+!reports/accuracy_report.txt
+!reports/benchmark_summary.md
+!reports/benchmark_summary.txt
+!reports/atan_table_q214.txt
+!reports/golden_generation_summary.txt
+!sim/golden_output.csv
+!sim/rtl_output.csv
+!sim/metrics_continuous.csv
+!sim/metrics_backpressure.csv
+!sim/rtl_output_continuous.csv
+!sim/rtl_output_backpressure.csv

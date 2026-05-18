@@ -1,93 +1,73 @@
-@"
 # Architecture
 
 ## Overview
 
-The design is a 16-stage pipelined CORDIC accelerator for sine and cosine computation.
+The design is a 16-stage pipelined CORDIC accelerator for sine and cosine computation in signed Q2.14 fixed-point format.
 
 ## Algorithm
 
-The accelerator uses rotation-mode CORDIC. Each pipeline stage performs one micro-rotation using shift-add arithmetic.
+The accelerator uses rotation-mode CORDIC. Each stage performs one micro-rotation using only additions, subtractions, arithmetic right shifts, and a precomputed arctangent constant.
 
-## Pipeline
-
-Each stage contains registered x, y and z values.
+For stage `i`:
 
 ```text
-Input angle -> Stage 0 -> Stage 1 -> ... -> Stage 15 -> sine/cosine output
+if z >= 0:
+  x_next = x - (y >>> i)
+  y_next = y + (x >>> i)
+  z_next = z - atan(2^-i)
+else:
+  x_next = x + (y >>> i)
+  y_next = y - (x >>> i)
+  z_next = z + atan(2^-i)
+```
 
-## Interface
+## Initialization
 
-The design uses a valid-ready streaming interface.
-
-## Target Throughput
-
-After pipeline fill, the target throughput is one sine/cosine output pair per clock cycle.
-
-## Target Latency
-
-The expected latency is 16 pipeline stages.
-
-## Phase 3 RTL Core
-
-The first RTL version implements a 16-stage always-advancing CORDIC pipeline.
-
-### Current Behavior
-
-- `in_ready` is always asserted.
-- A new input can be accepted every clock cycle.
-- `out_valid` is delayed through a 16-stage valid pipeline.
-- `out_ready` is part of the interface but is not used yet.
-- Full stall-aware backpressure support will be added in a later phase.
-
-### Pipeline Registers
-
-Each stage stores:
-
-- `x_pipe[i]`
-- `y_pipe[i]`
-- `z_pipe[i]`
-- `valid_pipe[i]`
-
-### CORDIC Initialization
-
-At input handshake:
+At an accepted input handshake:
 
 ```text
 x_0 = CORDIC_K
 y_0 = 0
 z_0 = input angle
-Expected Latency
+```
 
-The expected latency is 16 clock cycles from input handshake to output valid.
+`CORDIC_K` is the reciprocal CORDIC gain quantized to Q2.14.
 
-## Valid-Ready Backpressure Support
+## Pipeline
 
-The CORDIC core now supports output backpressure using a global pipeline stall mechanism.
+The RTL stores registered `x`, `y`, `z`, and valid state for the input stage and each of the 16 iteration stages:
 
-### Pipeline Advance Rule
+```text
+Input handshake -> Stage 0 -> Stage 1 -> ... -> Stage 16 -> sine/cosine output
+```
 
-The pipeline advances when:
+The output mapping is:
 
-out_ready = 1
+```text
+cos_out = x_pipe[STAGES]
+sin_out = y_pipe[STAGES]
+```
 
-or when the output stage is empty:
+## Valid-Ready Interface
 
-out_valid = 0
+The core exposes a streaming valid-ready interface:
 
-The implemented condition is:
+- `in_valid`
+- `in_ready`
+- `out_valid`
+- `out_ready`
 
-pipe_advance = out_ready || !valid_pipe[STAGES];
-Input Ready Behavior
+The current implementation uses a global stall for output backpressure.
 
-The input interface is ready only when the pipeline can advance:
+```text
+pipe_advance = out_ready || !valid_pipe[STAGES]
+in_ready     = pipe_advance
+```
 
-in_ready = pipe_advance;
-Stall Behavior
+When `out_valid` is high and `out_ready` is low, all pipeline registers hold their values. This preserves the output sample and every in-flight transaction. When the output is ready, the whole pipeline advances together.
 
-When the downstream interface deasserts out_ready while out_valid is high, all pipeline registers hold their values. This prevents output data loss and preserves all in-flight transactions.
+## Throughput and Latency
 
-Design Tradeoff
+Under continuous downstream readiness, the pipeline produces one sine/cosine pair per cycle after filling. The benchmark report measures both active-window throughput and output-span throughput.
 
-This implementation uses a global stall rather than per-stage elastic buffering. It is simpler, deterministic and appropriate for this fixed-latency CORDIC accelerator. Under continuous downstream readiness, the accelerator achieves one output per cycle after pipeline fill.
-
+The datapath contains 16 CORDIC iteration stages. The testbench latency metric is measured from accepted input transaction to accepted output transaction, so it includes registered valid-ready handshaking at the output.
