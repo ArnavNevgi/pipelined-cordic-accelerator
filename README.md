@@ -4,7 +4,7 @@
 
 This project implements a 16-stage pipelined CORDIC hardware accelerator in SystemVerilog for sine and cosine computation. The datapath uses rotation-mode CORDIC with signed Q2.14 fixed-point arithmetic and a valid-ready streaming interface with global-stall backpressure support.
 
-The project was completed without a physical FPGA board. Correctness and implementation quality are demonstrated through Python golden-model generation, QuestaSim RTL simulation, randomized valid-ready testing, SystemVerilog assertion checks, RTL-versus-golden error analysis, latency and throughput benchmarking, and Vivado synthesis plus post-route timing/utilization analysis for a Xilinx Artix-7 FPGA.
+The project was completed without a physical FPGA board. Correctness and implementation quality are demonstrated through Python golden-model generation, QuestaSim RTL simulation, randomized valid-ready testing, SystemVerilog assertion checks, RTL-versus-golden error analysis, latency and throughput benchmarking, and cross-vendor FPGA implementation on Vivado Artix-7 and Intel Quartus Cyclone V flows.
 
 ## Key Features
 
@@ -19,7 +19,8 @@ The project was completed without a physical FPGA board. Correctness and impleme
 - Numerical error analysis
 - Latency and throughput benchmark
 - SystemVerilog assertion checks
-- Vivado Artix-7 synthesis and post-route implementation
+- Vivado Artix-7 synthesis and post-route implementation reports
+- Quartus Cyclone V implementation reports for cross-vendor checks
 
 ## Architecture
 
@@ -162,6 +163,62 @@ Post-route utilization:
 
 The zero DSP and zero BRAM usage are expected for a shift-add CORDIC datapath. No physical board or package pin constraints were used. The timing result demonstrates post-route timing closure for the routed internal registered datapath at 100 MHz; board-level I/O timing would require real pin and external delay constraints.
 
+## Quartus Cyclone V Implementation Flow
+
+The Intel Quartus Prime flow was executed successfully as a cross-vendor FPGA implementation check targeting:
+
+| Item | Value |
+|---|---:|
+| FPGA family | Intel Cyclone V |
+| Device | 5CSEMA5F31C6 |
+| Tool | Intel Quartus Prime Lite 25.1std.0 Build 1129 |
+| Top-level entity | cordic_top |
+| Clock target | 100 MHz |
+| Clock period | 10.000 ns |
+| Physical board | Not used |
+
+Measured Quartus timing and utilization:
+
+| Metric | Result |
+|---|---:|
+| Timing status | PASS |
+| Worst-case slack / WNS equivalent | +6.230 ns |
+| Fitter status | Successful |
+| ALM usage | 405 / 32,070 = 1% |
+| Registers | 772 |
+| DSP blocks | 0 / 87 = 0% |
+| Block memory bits | 0 / 4,065,280 = 0% |
+
+The Quartus flow uses the same SystemVerilog RTL as the Vivado and QuestaSim flows. It does not add physical package pin constraints and should be treated as a no-board FPGA implementation compile. Non-clock top-level I/O is marked as virtual pins; board-level timing claims require real pin assignments and external I/O timing constraints.
+
+Run the Quartus wrapper:
+
+```text
+cd quartus
+quartus_sh -t run_quartus.tcl
+```
+
+Equivalent manual command sequence:
+
+```text
+cd quartus
+quartus_sh -t create_project.tcl
+cd build
+quartus_sh --flow compile cordic_quartus
+cd ..
+python extract_quartus_reports.py
+```
+
+Curated Quartus outputs are written to:
+
+- `reports/quartus/timing_summary.txt`
+- `reports/quartus/utilization_summary.txt`
+- `reports/quartus/fit_summary.txt`
+- `reports/quartus/quartus_compile.log`
+- `reports/quartus/README_or_STATUS.txt`
+
+The extracted Quartus summaries are stored under `reports/quartus/`. Together with the Vivado Artix-7 reports, these provide cross-vendor synthesis and timing reports for the same RTL.
+
 ## How to Run
 
 Generate golden vectors:
@@ -212,6 +269,13 @@ Regenerate Vivado reports:
 vivado -mode batch -source scripts/vivado_reports.tcl
 ```
 
+Run Quartus implementation:
+
+```text
+cd quartus
+quartus_sh -t run_quartus.tcl
+```
+
 ## Repository Structure
 
 ```text
@@ -219,6 +283,7 @@ pipelined-cordic-accelerator/
 |-- rtl/            SystemVerilog RTL core, package, and top wrapper
 |-- tb/             QuestaSim testbench and assertion module
 |-- scripts/        Python, QuestaSim, and Vivado batch scripts
+|-- quartus/        Quartus Cyclone V project, timing, and report scripts
 |-- sim/            Generated simulation CSV outputs
 |-- constraints/    Artix-7 timing constraints
 |-- reports/        Generated accuracy, benchmark, timing, and utilization reports
@@ -228,19 +293,24 @@ pipelined-cordic-accelerator/
 
 ## Results Summary
 
-| Category | Result |
-|---|---|
-| Accuracy | PASS across 1011 vectors |
+Verification against the Python golden model:
+
+| Metric | Result |
+|---|---:|
+| RTL outputs checked | 1011 |
 | Max sine error | 8 LSBs |
 | Max cosine error | 8 LSBs |
-| Continuous throughput | 1.000000 outputs/cycle output-span |
-| Backpressure throughput | 0.713479 outputs/cycle output-span |
-| Post-route timing | PASS at 100 MHz |
-| WNS | +3.947 ns |
-| LUT utilization | 1058 / 20800 = 5.09% |
-| Register utilization | 749 / 41600 = 1.80% |
-| DSP usage | 0 / 90 = 0.00% |
-| BRAM usage | 0 / 50 = 0.00% |
+| Continuous output-span throughput | 1.000000 outputs/cycle |
+| Randomized backpressure output-span throughput | 0.713479 outputs/cycle |
+
+FPGA implementation reports:
+
+| Flow | Target | Frequency | Timing | Slack | Logic | Registers | DSP | Memory |
+|---|---|---:|---|---:|---:|---:|---:|---:|
+| Vivado | Xilinx Artix-7 xc7a35tcpg236-1 | 100 MHz | PASS | +3.947 ns WNS | 1058 LUTs | 749 FFs | 0 DSP | 0 BRAM |
+| Quartus | Intel Cyclone V 5CSEMA5F31C6 | 100 MHz | PASS | +6.230 ns WNS equivalent | 405 ALMs | 772 registers | 0 DSP blocks | 0 block memory bits |
+
+Cross-vendor implementation note: the design closed 100 MHz timing in both the Vivado Artix-7 and Quartus Cyclone V implementation flows. These are no-board FPGA implementation compiles. No physical FPGA board validation, package pin constraints, or board-level I/O timing constraints are included.
 
 ## Limitations and Future Work
 

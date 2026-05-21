@@ -23,6 +23,27 @@ dfx_runtime.txt
 *.srcs/
 *.xpr
 
+# Quartus generated files
+quartus/build/
+quartus/output/
+quartus/db/
+quartus/incremental_db/
+quartus/output_files/
+db/
+incremental_db/
+output_files/
+*.qpf
+*.qsf
+*.sof
+*.pof
+*.summary
+*.smsg
+*.jdi
+*.pin
+*.qmsg
+*.qws
+*.qar
+
 # QuestaSim / ModelSim
 work/
 transcript
@@ -61,6 +82,10 @@ Thumbs.db
 !reports/route_status.rpt
 !reports/post_route_clock_utilization.rpt
 !reports/post_route_check_timing.rpt
+!reports/quartus/
+!reports/quartus/*.txt
+!reports/quartus/*.md
+!reports/quartus/quartus_compile.log
 !sim/golden_output.csv
 !sim/rtl_output.csv
 !sim/metrics.csv

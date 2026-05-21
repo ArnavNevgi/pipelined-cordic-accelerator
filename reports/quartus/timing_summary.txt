@@ -1,0 +1,21 @@
+Generated: 2026-05-21 11:53:29
+Project: cordic_quartus
+Top-level entity: cordic_top
+Target device: 5CSEMA5F31C6
+Quartus version: Quartus Prime Version 25.1std.0 Build 1129 10/21/2025 SC Lite Edition
+
+
+Timing status at 100 MHz: PASS
+Worst-case slack / WNS equivalent: +6.230 ns
+Fmax:
+  6. Slow 1100mV 85C Model Fmax Summary
+  14. Slow 1100mV 0C Model Fmax Summary
+  ; Slow 1100mV 85C Model Fmax Summary               ;
+  ; Fmax       ; Restricted Fmax ; Clock Name ; Note ;
+  This panel reports FMAX for every clock in the design, regardless of the user-specified clock periods.  FMAX is only computed for paths where the source and destination registers or ports are driven by the same clock.  Paths of different clocks, including generated clocks, are ignored.  For paths between a clock and its inversion, FMAX is computed as if the rising and falling edges are scaled along with FMAX, such that the duty cycle (in terms of a percentage) is maintained. Altera recommends that you always use clock constraints and other slack reports for sign-off analysis.
+  ; Slow 1100mV 0C Model Fmax Summary                ;
+  ; Fmax       ; Restricted Fmax ; Clock Name ; Note ;
+  This panel reports FMAX for every clock in the design, regardless of the user-specified clock periods.  FMAX is only computed for paths where the source and destination registers or ports are driven by the same clock.  Paths of different clocks, including generated clocks, are ignored.  For paths between a clock and its inversion, FMAX is computed as if the rising and falling edges are scaled along with FMAX, such that the duty cycle (in terms of a percentage) is maintained. Altera recommends that you always use clock constraints and other slack reports for sign-off analysis.
+
+Raw TimeQuest summary: C:\fpga_projects\pipelined-cordic-accelerator\quartus\build\output_files\cordic_quartus.sta.summary
+Raw TimeQuest report: C:\fpga_projects\pipelined-cordic-accelerator\quartus\build\output_files\cordic_quartus.sta.rpt
