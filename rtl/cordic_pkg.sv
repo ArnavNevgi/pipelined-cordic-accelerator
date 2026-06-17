@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 `ifndef CORDIC_PKG_SV
 `define CORDIC_PKG_SV
 
