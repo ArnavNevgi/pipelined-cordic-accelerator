@@ -1,10 +1,10 @@
-# Pipelined CORDIC Hardware Accelerator Benchmark
+# Pipelined CORDIC Hardware Accelerator
 
 ## Overview
 
 This project implements a 16-stage pipelined CORDIC hardware accelerator in SystemVerilog for sine and cosine computation. The datapath uses rotation-mode CORDIC with signed Q2.14 fixed-point arithmetic and a valid-ready streaming interface with global-stall backpressure support.
 
-The project was completed without a physical FPGA board. Correctness and implementation quality are demonstrated through Python golden-model generation, QuestaSim RTL simulation, randomized valid-ready testing, SystemVerilog assertion checks, RTL-versus-golden error analysis, latency and throughput benchmarking, and cross-vendor FPGA implementation on Vivado Artix-7 and Intel Quartus Cyclone V flows.
+The project now demonstrates an end-to-end FPGA path: Python golden-model generation, QuestaSim RTL simulation, randomized valid-ready testing, SystemVerilog assertion checks, RTL-versus-golden error analysis, latency and throughput benchmarking, cross-vendor FPGA implementation on Vivado Artix-7 and Intel Quartus Cyclone V flows, and physical ZedBoard hardware validation through a Zynq PS-to-PL AXI4-Lite integration.
 
 ## Key Features
 
@@ -21,6 +21,10 @@ The project was completed without a physical FPGA board. Correctness and impleme
 - SystemVerilog assertion checks
 - Vivado Artix-7 synthesis and post-route implementation reports
 - Quartus Cyclone V implementation reports for cross-vendor checks
+- AXI4-Lite register wrapper for Zynq PS control
+- ZedBoard Zynq-7020 Vivado block-design integration
+- Vitis bare-metal UART hardware validation demo
+- XSCT/JTAG direct AXI register validation
 
 ## Architecture
 
@@ -219,6 +223,56 @@ Curated Quartus outputs are written to:
 
 The extracted Quartus summaries are stored under `reports/quartus/`. Together with the Vivado Artix-7 reports, these provide cross-vendor synthesis and timing reports for the same RTL.
 
+## ZedBoard Hardware Implementation and Validation
+
+The CORDIC accelerator has also been implemented and validated on a physical ZedBoard with a Zynq-7020 device. The original valid-ready CORDIC core remains unchanged; the hardware demo adds an AXI4-Lite register wrapper around the core so the Zynq Processing System can control one CORDIC operation at a time.
+
+Hardware integration flow:
+
+- `rtl/cordic_axi_lite_wrapper.sv` wraps the CORDIC top level with AXI4-Lite control, status, input, and output registers.
+- Vivado packages the wrapper and dependent RTL as custom AXI4-Lite IP.
+- The custom IP is integrated into a Zynq-7000 block design for ZedBoard.
+- The Zynq PS controls the CORDIC accelerator in PL through AXI4-Lite using PS `M_AXI_GP0`.
+- PS `FCLK_CLK0` provides the 100 MHz PL clock for the CORDIC AXI wrapper.
+- Vivado generates the bitstream and exports `zedboard/hw/cordic_zedboard.xsa`.
+- Vitis builds a standalone bare-metal C application for `ps7_cortexa9_0`.
+- The application writes Q2.14 input angles, starts the accelerator, polls the `done` bit, reads sine/cosine registers, and prints results over the ZedBoard PS UART.
+
+AXI4-Lite register map, base address `0x43C00000`:
+
+| Offset | Register | Description |
+|---:|---|---|
+| `0x00` | CONTROL | bit 0 = start, bit 1 = done_ack |
+| `0x04` | STATUS | bit 0 = busy, bit 1 = done, bit 2 = in_ready, bit 3 = out_valid, bit 4 = start_pending |
+| `0x08` | ANGLE_IN | signed Q2.14 input angle |
+| `0x0C` | SIN_OUT | signed Q2.14 sine output |
+| `0x10` | COS_OUT | signed Q2.14 cosine output |
+
+Hardware validation results from the Vitis UART demo:
+
+| Angle | Input Q2.14 | SIN_OUT | COS_OUT | Max Error | Result |
+|---|---:|---:|---:|---:|---|
+| `0` | `0x0000` | `0x0004` | `0x3FFF` | 4 LSB | PASS |
+| `+pi/4` | `0x3244` | `0x2D41` | `0x2D42` | 1 LSB | PASS |
+| `-pi/4` | `0xCDBC` | `0xD2BE` | `0x2D42` | 1 LSB | PASS |
+| `+pi/2` | `0x6488` | `0x3FFF` | `0x0002` | 2 LSB | PASS |
+| `-pi/2` | `0x9B78` | `0xC000` | `0xFFFE` | 2 LSB | PASS |
+
+5/5 ZedBoard hardware tests passed within +/-16 LSB tolerance.
+
+### JTAG/XSCT AXI Validation
+
+The accelerator was also validated without UART by using XSCT direct JTAG memory access. XSCT directly wrote and read the CORDIC AXI4-Lite registers through the Zynq debug path, independently of the UART print code.
+
+Validated XSCT cases:
+
+| Angle | STATUS | SIN_OUT | COS_OUT |
+|---|---:|---:|---:|
+| `0x0000` | `0x00000006` | `0x00000004` | `0x00003FFF` |
+| `0x3244` | `0x00000006` | `0x00002D41` | `0x00002D42` |
+
+This proves the AXI4-Lite hardware path is accessible directly through JTAG debug access as well as through the Vitis UART demo.
+
 ## How to Run
 
 Generate golden vectors:
@@ -276,14 +330,58 @@ cd quartus
 quartus_sh -t run_quartus.tcl
 ```
 
+## How to Reproduce ZedBoard Build
+
+Package the CORDIC AXI4-Lite IP:
+
+```powershell
+C:\AMDDesignTools\2025.2.1\Vivado\bin\vivado.bat -mode batch -source zedboard\vivado\package_cordic_ip.tcl
+```
+
+Create the ZedBoard Vivado project, block design, bitstream, and XSA:
+
+```powershell
+C:\AMDDesignTools\2025.2.1\Vivado\bin\vivado.bat -mode batch -source zedboard\vivado\create_zedboard_project.tcl -tclargs -board_part digilentinc.com:zedboard:part0:1.1
+```
+
+If Windows path length issues occur, map the repo to a shorter drive path first:
+
+```powershell
+subst V: C:\fpga_projects\pipelined-cordic-accelerator
+```
+
+Generated Vivado build outputs, IP-packager outputs, `.bit`, and `.xsa` files are intentionally treated as generated artifacts.
+
+## How to Run Vitis Demo
+
+Use `zedboard/hw/cordic_zedboard.xsa` to create a standalone Vitis platform for `ps7_cortexa9_0`. Build the bare-metal application from `zedboard/vitis/cordic_uart_demo/main.c`, program the FPGA, run the ELF on the Zynq PS, and open the ZedBoard PS UART at 115200 baud.
+
+Expected final UART line:
+
+```text
+CORDIC ZedBoard hardware validation PASSED
+```
+
+## Evidence Files
+
+- `zedboard/evidence/zedboard_cordic_uart_pass.txt`
+- `zedboard/evidence/zedboard_cordic_jtag_axi_pass.txt`
+- `zedboard/evidence/zedboard_cordic_uart_pass.png`
+- `zedboard/vitis/cordic_uart_demo/main.c`
+- `zedboard/vivado/package_cordic_ip.tcl`
+- `zedboard/vivado/create_block_design.tcl`
+- `zedboard/vivado/create_zedboard_project.tcl`
+- `rtl/cordic_axi_lite_wrapper.sv`
+
 ## Repository Structure
 
 ```text
 pipelined-cordic-accelerator/
-|-- rtl/            SystemVerilog RTL core, package, and top wrapper
+|-- rtl/            SystemVerilog RTL core, package, top wrapper, and AXI-Lite wrapper
 |-- tb/             QuestaSim testbench and assertion module
 |-- scripts/        Python, QuestaSim, and Vivado batch scripts
 |-- quartus/        Quartus Cyclone V project, timing, and report scripts
+|-- zedboard/       ZedBoard Vivado integration, Vitis UART demo, and hardware evidence
 |-- sim/            Generated simulation CSV outputs
 |-- constraints/    Artix-7 timing constraints
 |-- reports/        Generated accuracy, benchmark, timing, and utilization reports
@@ -310,14 +408,21 @@ FPGA implementation reports:
 | Vivado | Xilinx Artix-7 xc7a35tcpg236-1 | 100 MHz | PASS | +3.947 ns WNS | 1058 LUTs | 749 FFs | 0 DSP | 0 BRAM |
 | Quartus | Intel Cyclone V 5CSEMA5F31C6 | 100 MHz | PASS | +6.230 ns WNS equivalent | 405 ALMs | 772 registers | 0 DSP blocks | 0 block memory bits |
 
-Cross-vendor implementation note: the design closed 100 MHz timing in both the Vivado Artix-7 and Quartus Cyclone V implementation flows. These are no-board FPGA implementation compiles. No physical FPGA board validation, package pin constraints, or board-level I/O timing constraints are included.
+ZedBoard hardware validation:
+
+| Platform | Interface | Software | Result |
+|---|---|---|---|
+| ZedBoard Zynq-7020 xc7z020clg484-1 | AXI4-Lite PS-to-PL | Vitis standalone UART polling demo | 5/5 tests PASS |
+| ZedBoard Zynq-7020 xc7z020clg484-1 | AXI4-Lite PS-to-PL | XSCT direct JTAG memory access | 2/2 register tests PASS |
+
+Cross-vendor implementation note: the design closed 100 MHz timing in both the Vivado Artix-7 and Quartus Cyclone V implementation flows. Those Artix-7 and Cyclone V results remain no-board FPGA implementation compiles. The separate ZedBoard flow adds physical Zynq PS/PL validation through AXI4-Lite.
 
 ## Limitations and Future Work
 
 - The current input angle range is `-pi/2` to `+pi/2` radians.
-- No physical FPGA board validation was performed.
-- No board-level package pin constraints are included.
-- Board-specific input/output delay constraints would be needed for hardware integration.
+- ZedBoard hardware validation uses AXI4-Lite polling, not interrupts.
+- The AXI4-Lite wrapper is a hardware demo integration layer, not a production-ready IP subsystem.
+- The Artix-7 and Quartus implementation flows remain no-board compile/report flows.
 - Quadrant correction could extend the design to a wider angle range.
 - An AXI4-Stream wrapper could be added around the existing valid-ready interface.
 - A parameterized stage-count sweep could compare accuracy, latency, and utilization tradeoffs.

@@ -57,7 +57,7 @@ The full flow exports the hardware platform here:
 zedboard/hw/cordic_zedboard.xsa
 ```
 
-The `.xsa` is exported with the bitstream included when the full build completes.
+The `.xsa` is exported with the bitstream included when the full build completes. Generated Vivado build outputs and hardware export files are not intended to be committed.
 
 ## Register Map
 
@@ -71,33 +71,49 @@ The Zynq PS accesses the CORDIC peripheral at base address `0x43C00000` unless o
 | `0x0C` | `SIN_OUT` | bits `[15:0]`: signed Q2.14 sine output |
 | `0x10` | `COS_OUT` | bits `[15:0]`: signed Q2.14 cosine output |
 
-## Next Step
+## Hardware Validation
 
-Create a Vitis C application using the exported `cordic_zedboard.xsa`. The app should use PS UART for console I/O, write a Q2.14 angle to `ANGLE_IN`, write `CONTROL.start`, poll `STATUS.done`, then read and print `SIN_OUT` and `COS_OUT`.
+The CORDIC accelerator has been physically validated on ZedBoard through the Zynq PS-to-PL AXI4-Lite path. A standalone Vitis application writes Q2.14 angles, starts the accelerator, polls `STATUS.done`, reads `SIN_OUT` and `COS_OUT`, and prints the results over the ZedBoard PS UART at 115200 baud.
 
-For example, angle `0x0000` should produce approximately:
+| Angle | Input Q2.14 | SIN_OUT | COS_OUT | Max Error | Result |
+|---|---:|---:|---:|---:|---|
+| `0` | `0x0000` | `0x0004` | `0x3FFF` | 4 LSB | PASS |
+| `+pi/4` | `0x3244` | `0x2D41` | `0x2D42` | 1 LSB | PASS |
+| `-pi/4` | `0xCDBC` | `0xD2BE` | `0x2D42` | 1 LSB | PASS |
+| `+pi/2` | `0x6488` | `0x3FFF` | `0x0002` | 2 LSB | PASS |
+| `-pi/2` | `0x9B78` | `0xC000` | `0xFFFE` | 2 LSB | PASS |
+
+5/5 ZedBoard hardware tests passed within +/-16 LSB tolerance.
+
+The accelerator was also validated without UART using XSCT direct JTAG memory access to the AXI4-Lite registers:
+
+| Angle | STATUS | SIN_OUT | COS_OUT |
+|---|---:|---:|---:|
+| `0x0000` | `0x00000006` | `0x00000004` | `0x00003FFF` |
+| `0x3244` | `0x00000006` | `0x00002D41` | `0x00002D42` |
+
+This confirms the hardware AXI register path independently of the UART print code.
+
+## Run The Vitis Demo
+
+Use the exported `zedboard/hw/cordic_zedboard.xsa` to create a standalone platform for `ps7_cortexa9_0`. Build the app source at:
 
 ```text
-sin = 0x0000
-cos = 0x4000
+zedboard/vitis/cordic_uart_demo/main.c
 ```
 
-Hardware Validation Result
+Program the FPGA, run the ELF, and open the ZedBoard PS UART at 115200 baud. The expected final line is:
 
-Board: ZedBoard Zynq-7020 xc7z020clg484-1
-Interface: Zynq PS to CORDIC PL accelerator through AXI4-Lite
-Software: Vitis standalone bare-metal C application
-UART: ZedBoard onboard PS UART, 115200 baud
+```text
+CORDIC ZedBoard hardware validation PASSED
+```
 
-Result:
-5/5 hardware tests passed.
+## Evidence Files
 
-Tested angles:
-0 rad
-+pi/4
--pi/4
-+pi/2
--pi/2
-
-CORDIC AXI base address:
-0x43C00000
+- `zedboard/evidence/zedboard_cordic_uart_pass.txt`
+- `zedboard/evidence/zedboard_cordic_jtag_axi_pass.txt`
+- `zedboard/evidence/zedboard_cordic_uart_pass.png`
+- `zedboard/vitis/cordic_uart_demo/main.c`
+- `zedboard/vivado/package_cordic_ip.tcl`
+- `zedboard/vivado/create_block_design.tcl`
+- `zedboard/vivado/create_zedboard_project.tcl`
