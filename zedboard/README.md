@@ -81,3 +81,23 @@ For example, angle `0x0000` should produce approximately:
 sin = 0x0000
 cos = 0x4000
 ```
+
+Hardware Validation Result
+
+Board: ZedBoard Zynq-7020 xc7z020clg484-1
+Interface: Zynq PS to CORDIC PL accelerator through AXI4-Lite
+Software: Vitis standalone bare-metal C application
+UART: ZedBoard onboard PS UART, 115200 baud
+
+Result:
+5/5 hardware tests passed.
+
+Tested angles:
+0 rad
++pi/4
+-pi/4
++pi/2
+-pi/2
+
+CORDIC AXI base address:
+0x43C00000

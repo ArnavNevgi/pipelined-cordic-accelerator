@@ -1,0 +1,32 @@
+==============================
+ZedBoard CORDIC AXI-Lite Demo
+==============================
+
+Test: angle = 0 rad
+ANGLE_IN = 0x0000
+STATUS  = 0x00000006
+SIN_OUT = 0x0004 signed=4
+COS_OUT = 0x3FFF signed=16383
+
+Test: angle ~= pi/4
+ANGLE_IN = 0x3244
+STATUS  = 0x00000006
+SIN_OUT = 0x2D41 signed=11585
+COS_OUT = 0x2D42 signed=11586
+
+CORDIC demo complete.
+
+==============================
+ZedBoard CORDIC AXI-Lite Demo
+==============================
+Base address: 0x43C00000
+Tolerance   : +/- 16 LSB
+
+PASS 0 rad          angle=0x0000 sin=0x0004/4 exp=0 err=4 cos=0x3FFF/16383 exp=16384 err=1 STATUS=0x00000006
+PASS +pi/4          angle=0x3244 sin=0x2D41/11585 exp=11585 err=0 cos=0x2D42/11586 exp=11585 err=1 STATUS=0x00000006
+PASS -pi/4          angle=0xCDBC sin=0xD2BE/-11586 exp=-11585 err=1 cos=0x2D42/11586 exp=11585 err=1 STATUS=0x00000006
+PASS +pi/2          angle=0x6488 sin=0x3FFF/16383 exp=16384 err=1 cos=0x0002/2 exp=0 err=2 STATUS=0x00000006
+PASS -pi/2          angle=0x9B78 sin=0xC000/-16384 exp=-16384 err=0 cos=0xFFFE/-2 exp=0 err=2 STATUS=0x00000006
+
+Summary: 5/5 tests passed
+CORDIC ZedBoard hardware validation PASSED
