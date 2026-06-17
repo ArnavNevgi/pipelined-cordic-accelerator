@@ -8,3 +8,5 @@
 # Local Vivado run logs in this subtree
 /vivado/*.jou
 /vivado/*.log
+
+vitis_workspace/
