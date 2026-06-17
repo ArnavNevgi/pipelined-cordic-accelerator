@@ -1,0 +1,10 @@
+# Generated Vivado project and IP-packager outputs
+/vivado/build/
+/vivado/ip_repo/
+
+# Generated hardware export
+/hw/
+
+# Local Vivado run logs in this subtree
+/vivado/*.jou
+/vivado/*.log
